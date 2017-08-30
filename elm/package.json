@@ -1,0 +1,17 @@
+{
+  "name": "trump-conflicts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bundle.js",
+  "scripts": {
+    "make": "elm make ./src/Main.elm --output ./bundle.js",
+    "debug": "elm make ./src/Main.elm --output ./bundle.js --debug",
+    "format": "elm-format src --yes"
+  },
+  "dependencies": {
+    "elm": "^0.18.0"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "MIT"
+}
