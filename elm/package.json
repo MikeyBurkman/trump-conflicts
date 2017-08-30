@@ -7,7 +7,7 @@
     "make": "elm make ./src/Main.elm --output ./bundle.js",
     "debug": "elm make ./src/Main.elm --output ./bundle.js --debug",
     "format": "elm-format src --yes",
-    "start": "concurrently \"http-server\" \"opn http://localhost:8080\""
+    "start": "concurrently -k \"http-server\" \"opn http://localhost:8080\""
   },
   "dependencies": {
     "concurrently": "^3.5.0",
