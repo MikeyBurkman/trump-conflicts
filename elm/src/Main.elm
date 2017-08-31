@@ -70,7 +70,6 @@ filterConflicts model =
         |> filterByFamilyMember
 
 
-
 clearFilter : Model -> Model
 clearFilter model =
     model
@@ -134,13 +133,13 @@ view model =
                 --, td [] [ fieldset [] (List.map familyMemberChooser [ All, Sr, Jr, Ivanka, Jared, Melania, Eric ]) ]
                 , td []
                     [ fieldset []
-                        [ familyMemberRadio "All" (model.selectedFamilyMember == All) (ChooseFamilyMember All)
-                        , familyMemberRadio "Trump" (model.selectedFamilyMember == Sr) (ChooseFamilyMember Sr)
-                        , familyMemberRadio "Jr" (model.selectedFamilyMember == Jr) (ChooseFamilyMember Jr)
-                        , familyMemberRadio "Ivanka" (model.selectedFamilyMember == Ivanka) (ChooseFamilyMember Ivanka)
-                        , familyMemberRadio "Jared" (model.selectedFamilyMember == Jared) (ChooseFamilyMember Jared)
-                        , familyMemberRadio "Melania" (model.selectedFamilyMember == Melania) (ChooseFamilyMember Melania)
-                        , familyMemberRadio "Eric" (model.selectedFamilyMember == Eric) (ChooseFamilyMember Eric)
+                        [ familyMemberRadio model All
+                        , familyMemberRadio model Sr
+                        , familyMemberRadio model Jr
+                        , familyMemberRadio model Ivanka
+                        , familyMemberRadio model Jared
+                        , familyMemberRadio model Melania
+                        , familyMemberRadio model Eric
                         ]
                     ]
                 ]
@@ -164,8 +163,8 @@ drawConflictRows conflicts selectedConflict =
                 , td [ style [ ( "width", "400px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.description ]
                 ]
     in
-    conflicts
-        |> List.map drawConflictRow
+        conflicts
+            |> List.map drawConflictRow
 
 
 isSelected : Maybe Conflict -> Conflict -> Bool
@@ -188,22 +187,22 @@ drawSources conflict =
                 , td [ style [ ( "width", "80px" ) ] ] [ text source.date ]
                 ]
     in
-    case conflict of
-        Nothing ->
-            [ h3 [] [ text <| "" ] ]
+        case conflict of
+            Nothing ->
+                [ h3 [] [ text <| "" ] ]
 
-        Just conflict ->
-            conflict.sources
-                |> List.map drawSourceRow
+            Just conflict ->
+                conflict.sources
+                    |> List.map drawSourceRow
 
 
-familyMemberRadio : String -> Bool -> msg -> Html msg
-familyMemberRadio value isChecked msg =
+familyMemberRadio : Model -> FamilyMember -> Html Msg
+familyMemberRadio model familyMember =
     label
         [ style [ ( "padding", "20px" ) ]
         ]
-        [ input [ type_ "radio", name "familyMember", onClick msg, checked isChecked ] []
-        , text value
+        [ input [ type_ "radio", name "familyMember", onClick (ChooseFamilyMember familyMember), checked (model.selectedFamilyMember == familyMember) ] []
+        , text (familyMemberToString familyMember)
         ]
 
 
