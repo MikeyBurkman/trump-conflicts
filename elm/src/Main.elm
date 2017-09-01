@@ -1,19 +1,24 @@
 module Main exposing (..)
 
-import Data exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import List exposing (..)
-import Types exposing (..)
+import List
+import Data
+import Types exposing (Conflict, Source)
 
 
 type alias Model =
-    { conflictList : List Conflict
-    , selectedList : List Conflict
+    { allConflicts : List Conflict
+    , filteredConflicts : List Conflict
     , selectedConflict : Maybe Conflict
-    , selectedFamilyMember : FamilyMember
-    , searchString : String
+    , searchParams : SearchParams
+    }
+
+
+type alias SearchParams =
+    { searchString : String
+    , familyMember : FamilyMember
     }
 
 
@@ -29,11 +34,13 @@ type FamilyMember
 
 initModel : Model
 initModel =
-    { conflictList = conflictList
-    , selectedList = conflictList
+    { allConflicts = Data.conflictList
+    , filteredConflicts = Data.conflictList
     , selectedConflict = Nothing
-    , selectedFamilyMember = All
-    , searchString = ""
+    , searchParams =
+        { familyMember = All
+        , searchString = ""
+        }
     }
 
 
@@ -52,50 +59,73 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         Search search ->
-            filterConflicts { model | searchString = search }
+            let
+                searchParams =
+                    updateSearchString model.searchParams search
+
+                filteredConflicts =
+                    filterConflicts model.allConflicts searchParams
+            in
+                { model | searchParams = searchParams, filteredConflicts = filteredConflicts }
+
+        ChooseFamilyMember familyMember ->
+            let
+                searchParams =
+                    updateSearchFamilyMember model.searchParams familyMember
+
+                filteredConflicts =
+                    filterConflicts model.allConflicts searchParams
+            in
+                { model | searchParams = searchParams, filteredConflicts = filteredConflicts }
 
         SelectConflict conflict ->
             { model | selectedConflict = Just conflict }
 
-        ChooseFamilyMember selectedFamilyMember ->
-            filterConflicts { model | selectedFamilyMember = selectedFamilyMember }
-
         Clear ->
-            filterConflicts { model | searchString = "", selectedFamilyMember = All }
+            initModel
 
 
-filterConflicts : Model -> Model
-filterConflicts model =
-    filterBySearch model
-        |> filterByFamilyMember
+updateSearchString : SearchParams -> String -> SearchParams
+updateSearchString params searchString =
+    { params | searchString = searchString }
 
 
-clearFilter : Model -> Model
-clearFilter model =
-    model
+updateSearchFamilyMember : SearchParams -> FamilyMember -> SearchParams
+updateSearchFamilyMember params familyMember =
+    { params | familyMember = familyMember }
 
 
-
--- This begins with all conflicts - i.e. conflictList, so must come first
-
-
-filterBySearch : Model -> Model
-filterBySearch model =
-    { model | selectedList = List.filter (\record -> String.contains (String.toUpper model.searchString) (String.toUpper (record.conflictingEntity ++ record.description))) model.conflictList }
+filterConflicts : List Conflict -> SearchParams -> List Conflict
+filterConflicts allConflicts searchParams =
+    allConflicts
+        |> filterBySearch searchParams.searchString
+        |> filterByFamilyMember searchParams.familyMember
 
 
+filterBySearch : String -> List Conflict -> List Conflict
+filterBySearch searchString conflicts =
+    let
+        normalizedSearch =
+            String.toUpper searchString
 
--- This begins with selectedList, so expects some filtering has already happened
+        containsWord record =
+            String.contains normalizedSearch (String.toUpper (record.conflictingEntity ++ record.description))
+    in
+        List.filter containsWord conflicts
 
 
-filterByFamilyMember : Model -> Model
-filterByFamilyMember model =
-    case model.selectedFamilyMember of
+filterByFamilyMember : FamilyMember -> List Conflict -> List Conflict
+filterByFamilyMember familyMember conflicts =
+    case familyMember of
         All ->
-            model
+            conflicts
 
-        _ ->
-            { model | selectedList = List.filter (\record -> stringToFamilyMember record.familyMember == model.selectedFamilyMember) model.selectedList }
+        selected ->
+            let
+                matchesFamilyMember record =
+                    stringToFamilyMember record.familyMember == selected
+            in
+                List.filter matchesFamilyMember conflicts
 
 
 
@@ -126,26 +156,14 @@ view model =
             ]
         , tr []
             [ td []
-                [ input [ type_ "text", placeholder "Search", value model.searchString, onInput Search ] []
-                , td [] [ text (toString (length model.selectedList) ++ " conflicts") ]
+                [ input [ type_ "text", placeholder "Search", value model.searchParams.searchString, onInput Search ] []
+                , td [] [ text (toString (List.length model.filteredConflicts) ++ " conflicts") ]
                 , td [] [ button [ onClick Clear ] [ text "Clear" ] ]
-
-                --, td [] [ fieldset [] (List.map familyMemberChooser [ All, Sr, Jr, Ivanka, Jared, Melania, Eric ]) ]
-                , td []
-                    [ fieldset []
-                        [ familyMemberRadio model All
-                        , familyMemberRadio model Sr
-                        , familyMemberRadio model Jr
-                        , familyMemberRadio model Ivanka
-                        , familyMemberRadio model Jared
-                        , familyMemberRadio model Melania
-                        , familyMemberRadio model Eric
-                        ]
-                    ]
+                , td [] [ familyMemberRadios model ]
                 ]
             ]
         , tr []
-            [ td [ conflictPaneStyle ] (drawConflictRows model.selectedList model.selectedConflict)
+            [ td [ conflictPaneStyle ] (drawConflictRows model.filteredConflicts model.selectedConflict)
             , td [ sourcePaneStyle ] (drawSources model.selectedConflict)
             ]
         ]
@@ -163,8 +181,7 @@ drawConflictRows conflicts selectedConflict =
                 , td [ style [ ( "width", "400px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.description ]
                 ]
     in
-        conflicts
-            |> List.map drawConflictRow
+        List.map drawConflictRow conflicts
 
 
 isSelected : Maybe Conflict -> Conflict -> Bool
@@ -189,21 +206,39 @@ drawSources conflict =
     in
         case conflict of
             Nothing ->
-                [ h3 [] [ text <| "" ] ]
+                [ h3 [] [ text "" ] ]
 
             Just conflict ->
                 conflict.sources
                     |> List.map drawSourceRow
 
 
-familyMemberRadio : Model -> FamilyMember -> Html Msg
-familyMemberRadio model familyMember =
-    label
-        [ style [ ( "padding", "20px" ) ]
-        ]
-        [ input [ type_ "radio", name "familyMember", onClick (ChooseFamilyMember familyMember), checked (model.selectedFamilyMember == familyMember) ] []
-        , text (familyMemberToString familyMember)
-        ]
+familyMemberRadios : Model -> Html Msg
+familyMemberRadios model =
+    let
+        radio familyMember =
+            label
+                [ style [ ( "padding", "20px" ) ]
+                ]
+                [ input
+                    [ type_ "radio"
+                    , name "familyMember"
+                    , onClick (ChooseFamilyMember familyMember)
+                    , checked (model.searchParams.familyMember == familyMember)
+                    ]
+                    []
+                , text (familyMemberToString familyMember)
+                ]
+    in
+        fieldset []
+            [ radio All
+            , radio Sr
+            , radio Jr
+            , radio Ivanka
+            , radio Jared
+            , radio Melania
+            , radio Eric
+            ]
 
 
 familyMemberToString : FamilyMember -> String
