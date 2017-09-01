@@ -60,39 +60,35 @@ update msg model =
     case msg of
         Search search ->
             let
-                searchParams =
-                    updateSearchString model.searchParams search
+                oldSearchParams =
+                    model.searchParams
 
-                filteredConflicts =
-                    filterConflicts model.allConflicts searchParams
+                newSearchParams =
+                    { oldSearchParams | searchString = search }
             in
-                { model | searchParams = searchParams, filteredConflicts = filteredConflicts }
+                { model
+                    | searchParams = newSearchParams
+                    , filteredConflicts = filterConflicts model.allConflicts newSearchParams
+                }
 
         ChooseFamilyMember familyMember ->
             let
-                searchParams =
-                    updateSearchFamilyMember model.searchParams familyMember
+                oldSearchParams =
+                    model.searchParams
 
-                filteredConflicts =
-                    filterConflicts model.allConflicts searchParams
+                newSearchParams =
+                    { oldSearchParams | familyMember = familyMember }
             in
-                { model | searchParams = searchParams, filteredConflicts = filteredConflicts }
+                { model
+                    | searchParams = newSearchParams
+                    , filteredConflicts = filterConflicts model.allConflicts newSearchParams
+                }
 
         SelectConflict conflict ->
             { model | selectedConflict = Just conflict }
 
         Clear ->
             initModel
-
-
-updateSearchString : SearchParams -> String -> SearchParams
-updateSearchString params searchString =
-    { params | searchString = searchString }
-
-
-updateSearchFamilyMember : SearchParams -> FamilyMember -> SearchParams
-updateSearchFamilyMember params familyMember =
-    { params | familyMember = familyMember }
 
 
 filterConflicts : List Conflict -> SearchParams -> List Conflict
