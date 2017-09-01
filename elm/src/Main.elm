@@ -170,12 +170,16 @@ drawConflictRows conflicts selectedConflict =
     let
         drawConflictRow : Conflict -> Html Msg
         drawConflictRow conflict =
-            tr [ onClick (SelectConflict conflict) ]
-                [ td [ style [ ( "width", "70px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.familyMember ]
-                , td [ style [ ( "width", "70px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.category ]
-                , td [ style [ ( "width", "100px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.conflictingEntity ]
-                , td [ style [ ( "width", "400px" ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text conflict.description ]
-                ]
+            let
+                drawTd width getValue =
+                    td [ style [ ( "width", width ) ], classList [ ( "selected", isSelected selectedConflict conflict ) ] ] [ text (getValue conflict) ]
+            in
+                tr [ onClick (SelectConflict conflict) ]
+                    [ drawTd "70px" .familyMember
+                    , drawTd "70px" .category
+                    , drawTd "100px" .conflictingEntity
+                    , drawTd "400px" .description
+                    ]
     in
         List.map drawConflictRow conflicts
 
